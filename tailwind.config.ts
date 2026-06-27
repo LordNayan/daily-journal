@@ -7,6 +7,13 @@ const config: Config = {
       fontFamily: {
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
+      colors: {
+        brand: {
+          navy: '#252963',
+          teal: '#2ec4a5',
+          'teal-dark': '#25a88e',
+        },
+      },
     },
   },
   plugins: [],

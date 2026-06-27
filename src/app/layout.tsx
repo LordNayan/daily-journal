@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Daily Journal',
-  description: 'Team daily journal — radical transparency',
+  title: 'Convosight · Daily Journal',
+  description: 'Convosight team daily journal — radical transparency',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -120,14 +120,17 @@ export function JournalView() {
     <div className="flex flex-col min-h-screen">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-4">
-        <h1 className="text-base font-bold text-gray-900 shrink-0">Daily Journal</h1>
+        <div className="flex items-center gap-2 shrink-0">
+          <img src="/company_logo.png" alt="Convosight" className="h-16 w-auto" />
+          <span className="text-sm font-semibold text-brand-navy">Daily Journal</span>
+        </div>
 
         <input
           type="date"
           value={date}
           max={todayStr()}
           onChange={(e) => setDate(e.target.value)}
-          className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"
         />
 
         {!isToday && (
@@ -144,7 +147,7 @@ export function JournalView() {
               <button
                 onClick={handleRollover}
                 disabled={rollingOver}
-                className="text-sm bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-md px-3 py-1.5 transition-colors"
+                className="text-sm bg-brand-teal hover:bg-brand-teal-dark disabled:opacity-50 text-white rounded-md px-3 py-1.5 transition-colors"
               >
                 {rollingOver ? 'Rolling over…' : 'Start new day'}
               </button>
@@ -161,7 +164,7 @@ export function JournalView() {
             )}
           </div>
           {(session.role === 'admin' || session.role === 'cto') && (
-            <a href="/admin" className="text-sm text-indigo-600 hover:text-indigo-800 font-medium">
+            <a href="/admin" className="text-sm text-brand-teal hover:text-brand-navy font-medium">
               Admin
             </a>
           )}
@@ -196,7 +199,7 @@ export function JournalView() {
               {isToday && (session.role === 'pm' || session.role === 'admin' || session.role === 'cto') && (
                 <button
                   onClick={handleRollover}
-                  className="mt-1 text-sm text-indigo-600 hover:text-indigo-800 underline"
+                  className="mt-1 text-sm text-brand-teal hover:text-brand-navy underline"
                 >
                   Run rollover to create today&apos;s rows
                 </button>
@@ -234,7 +237,7 @@ export function JournalView() {
 
       {/* Footer */}
       <footer className="bg-white border-t border-gray-100 px-4 py-2 text-xs text-gray-400 flex items-center justify-between">
-        <span>Daily Journal · {date}</span>
+        <span>Convosight Daily Journal · {date}</span>
         <span className="text-amber-500">
           ⚠ In-memory DB — data resets on server restart
         </span>
