@@ -1,6 +1,6 @@
 # Daily Journal (DJ)
 
-A spreadsheet-style daily standup journal for engineering teams — one row per person per day, built on Next.js + SQLite.
+A spreadsheet-style daily standup journal for engineering teams — one row per person per day, built on Next.js + Neon Postgres.
 
 ## Quick start
 
@@ -54,37 +54,18 @@ Password pattern: `<firstname_lowercase>123` (e.g. `nayan123`). For names with a
 | **pm** | Trigger rollover, manage users, edit any engineer row |
 | **ceo** | Read-only view |
 
-## ⚠️ In-memory database — data loss caveat
+## Database
 
-The database is opened as SQLite `:memory:` and is **re-seeded on every server restart**. All data entered during a session is lost when the server process stops or redeploys. This is intentional for the demo.
+Data is stored in [Neon](https://neon.tech) (serverless Postgres) and persists across restarts and deployments.
 
-**To make data persistent:** swap `better-sqlite3` opened with `:memory:` for a file-based or remote database by editing one file — `src/db/index.ts`. Replace:
-
-```ts
-const db = new Database(':memory:')
-```
-
-with any of:
-
-```ts
-// File-based SQLite (persists locally, not on Vercel)
-const db = new Database('/tmp/journal.db')
-
-// Turso/LibSQL (works on Vercel — install @libsql/client)
-// See: https://docs.turso.tech/sdk/ts/quickstart
-
-// Neon Postgres (works on Vercel — install @vercel/postgres)
-// Replace the db module entirely with the Postgres equivalents
-```
-
-The rest of the codebase uses the repository functions in `src/db/repositories/` — those are the only files you'd need to update for a different DB driver.
+The schema is auto-applied on startup via `src/db/schema.ts`. Seed data (users, streams) is inserted once on first run via `src/db/seed.ts` and skipped if already present.
 
 ## File uploads
 
-Files are stored as base64 in the in-memory SQLite database. They are:
+Files are stored as base64 in the Postgres database. They are:
 - Limited to **2 MB per file** (enforced client-side)
-- Lost on server restart (same as all other data)
-- Not suitable for production — swap to S3/R2/Cloudflare for real use
+- Persistent across restarts
+- Not suitable for large-scale use — swap to S3/R2/Cloudflare if storage becomes a concern
 
 ## Daily rollover
 
@@ -108,7 +89,7 @@ Two ways to roll over to a new day:
 
 `vercel.json` includes a cron job that calls `POST /api/rollover` daily at 3 AM UTC (adjust as needed). On Vercel, set the `CRON_SECRET` environment variable and the cron job will pass it as a Bearer token.
 
-> **Note:** Because the database is in-memory, the Vercel cron rollover will write to the fresh DB instance of that invocation, but that data won't persist to subsequent requests (each serverless invocation may be a different container). For cron to be meaningful, you need a persistent DB first.
+> **Note:** With Neon as the database, cron-triggered rollovers persist correctly across all serverless invocations.
 
 ## Deploy to Vercel
 
@@ -118,17 +99,9 @@ vercel deploy
 ```
 
 Set environment variables in the Vercel dashboard:
+- `DB_DATABASE_URL` — Neon connection string (add via the Neon integration or manually)
 - `JWT_SECRET` — a long random string for signing session tokens
 - `CRON_SECRET` — a long random string for securing the cron endpoint (optional)
-
-`better-sqlite3` requires a native binary compiled for the Vercel Lambda runtime. Vercel handles this automatically via the `@vercel/nft` bundler. If you hit build errors, add:
-
-```json
-// package.json
-"scripts": {
-  "vercel-build": "next build"
-}
-```
 
 ## Anti-overwrite guarantees test
 
@@ -143,4 +116,4 @@ This script proves:
 
 ## Customising streams
 
-Edit the `STREAMS` array in `src/db/seed.ts`. The array is clearly marked at the top of the file. Changes take effect on next server restart (since the DB is re-seeded).
+Edit the `STREAMS` array in `src/db/seed.ts`. The array is clearly marked at the top of the file. Changes take effect on next server restart — new streams are inserted if missing, but existing ones are not deleted.

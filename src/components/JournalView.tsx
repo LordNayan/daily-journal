@@ -238,9 +238,6 @@ export function JournalView() {
       {/* Footer */}
       <footer className="bg-white border-t border-gray-100 px-4 py-2 text-xs text-gray-400 flex items-center justify-between">
         <span>Convosight Daily Journal · {date}</span>
-        <span className="text-amber-500">
-          ⚠ In-memory DB — data resets on server restart
-        </span>
       </footer>
     </div>
   )
