@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL ?? 'https://daily-journal-blond-chi.vercel.app'),
   title: 'Convosight · Daily Journal',
   description: 'Convosight team daily journal — radical transparency',
   openGraph: {
