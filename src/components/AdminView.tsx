@@ -113,6 +113,7 @@ function StreamsTab() {
       {addError && <p className="text-xs text-red-500">{addError}</p>}
 
       {/* Table */}
+      <div className="overflow-x-auto">
       <table className="w-full text-sm border-collapse">
         <thead>
           <tr className="text-xs text-gray-400 uppercase tracking-wide border-b">
@@ -166,6 +167,7 @@ function StreamsTab() {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   )
 }
@@ -296,6 +298,7 @@ function PeopleTab() {
         </button>
       </div>
 
+      <div className="overflow-x-auto">
       <table className="w-full text-sm border-collapse">
         <thead>
           <tr className="text-xs text-gray-400 uppercase tracking-wide border-b">
@@ -339,6 +342,7 @@ function PeopleTab() {
           ))}
         </tbody>
       </table>
+      </div>
 
       {/* Add modal */}
       {showAdd && (

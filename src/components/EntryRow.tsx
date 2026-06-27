@@ -86,33 +86,43 @@ export function EntryRow({ entry: initialEntry, allStreams, session, isToday, is
   return (
     <>
       <tr
-        className={`group border-b border-gray-100 hover:bg-gray-50/50 transition-colors ${
-          isMine
-            ? 'bg-blue-50/40 border-l-[3px] border-l-blue-400'
+        className={`group border-b border-gray-100 hover:bg-gray-50/50 transition-colors
+          max-md:block max-md:rounded-xl max-md:border max-md:border-gray-200 max-md:bg-white max-md:p-3 max-md:space-y-3 max-md:hover:bg-white
+          ${isMine
+            ? 'bg-blue-50/40 border-l-[3px] border-l-blue-400 max-md:border-l-[3px] max-md:border-l-blue-400'
             : 'border-l-[3px] border-l-transparent'
-        }`}
+          }`}
       >
         {/* Person */}
-        <td className="px-3 py-2 align-top w-36 shrink-0">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className={`text-sm font-medium ${isMine ? 'text-blue-700' : 'text-gray-800'}`}>
-              {entry.user.name}
-              {isMine && <span className="ml-1 text-xs text-blue-400 font-normal">(you)</span>}
-            </span>
-            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${designationBadge(entry.user.designation)}`}>
-              {entry.user.designation || entry.user.role}
-            </span>
+        <td className="px-3 py-2 align-top w-36 shrink-0 max-md:block max-md:px-0 max-md:py-0 max-md:pb-2 max-md:border-b max-md:border-gray-100">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className={`text-sm font-medium ${isMine ? 'text-blue-700' : 'text-gray-800'}`}>
+                {entry.user.name}
+                {isMine && <span className="ml-1 text-xs text-blue-400 font-normal">(you)</span>}
+              </span>
+              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${designationBadge(entry.user.designation)}`}>
+                {entry.user.designation || entry.user.role}
+              </span>
+            </div>
+            <button
+              onClick={() => setShowHistory(true)}
+              className="text-[10px] text-gray-400 hover:text-gray-600 underline md:hidden"
+            >
+              history
+            </button>
           </div>
           <button
             onClick={() => setShowHistory(true)}
-            className="mt-1 text-[10px] text-gray-400 hover:text-gray-600 underline block opacity-0 group-hover:opacity-100 transition-opacity"
+            className="mt-1 text-[10px] text-gray-400 hover:text-gray-600 underline hidden md:block opacity-0 group-hover:opacity-100 transition-opacity"
           >
             history
           </button>
         </td>
 
         {/* Streams */}
-        <td className="px-3 py-2 align-top w-44">
+        <td className="px-3 py-2 align-top w-44 max-md:block max-md:px-0 max-md:py-0">
+          <p className="md:hidden text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1">Streams</p>
           <div className="flex flex-col gap-0.5">
             <StreamPicker
               allStreams={allStreams}
@@ -125,8 +135,9 @@ export function EntryRow({ entry: initialEntry, allStreams, session, isToday, is
         </td>
 
         {/* RM Comments */}
-        <td className="px-3 py-2 align-top w-48 bg-amber-50/30">
-          {/* RM Comments: if there's a comment and the viewer is the engineer, highlight it */}
+        <td className={`px-3 py-2 align-top w-48 bg-amber-50/30 max-md:block max-md:px-0 max-md:py-0
+          ${!canEditRM && !entry.rmComments ? 'max-md:hidden' : ''}`}>
+          <p className="md:hidden text-[10px] font-semibold uppercase tracking-wide text-amber-500 mb-1">RM Comments</p>
           <div className="space-y-1">
             {!canEditRM && entry.rmComments && isMine && (
               <div className="bg-amber-50 border border-amber-200 rounded p-2 text-xs text-amber-800 mb-1">
@@ -167,7 +178,8 @@ export function EntryRow({ entry: initialEntry, allStreams, session, isToday, is
         </td>
 
         {/* Today */}
-        <td className="px-3 py-2 align-top min-w-[200px]">
+        <td className="px-3 py-2 align-top min-w-[200px] max-md:block max-md:px-0 max-md:py-0">
+          <p className="md:hidden text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1">Today</p>
           <InlineCell
             key={`${entry.id}-today`}
             entryId={entry.id}
@@ -183,7 +195,8 @@ export function EntryRow({ entry: initialEntry, allStreams, session, isToday, is
         </td>
 
         {/* Yesterday */}
-        <td className="px-3 py-2 align-top min-w-[180px]">
+        <td className="px-3 py-2 align-top min-w-[180px] max-md:block max-md:px-0 max-md:py-0">
+          <p className="md:hidden text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1">Yesterday</p>
           <InlineCell
             key={`${entry.id}-yesterday`}
             entryId={entry.id}
@@ -198,7 +211,10 @@ export function EntryRow({ entry: initialEntry, allStreams, session, isToday, is
         </td>
 
         {/* Blocked On */}
-        <td className={`px-3 py-2 align-top w-40 transition-colors ${entry.blockedOn ? 'bg-red-50/60' : ''}`}>
+        <td className={`px-3 py-2 align-top w-40 transition-colors max-md:block max-md:px-0 max-md:py-0
+          ${entry.blockedOn ? 'bg-red-50/60' : ''}
+          ${!canEdit && !entry.blockedOn ? 'max-md:hidden' : ''}`}>
+          <p className="md:hidden text-[10px] font-semibold uppercase tracking-wide text-red-400 mb-1">Blocked On</p>
           <InlineCell
             key={`${entry.id}-blockedOn`}
             entryId={entry.id}
@@ -213,7 +229,9 @@ export function EntryRow({ entry: initialEntry, allStreams, session, isToday, is
         </td>
 
         {/* Documents */}
-        <td className="px-3 py-2 align-top w-44">
+        <td className={`px-3 py-2 align-top w-44 max-md:block max-md:px-0 max-md:py-0
+          ${!canEdit && entry.documents.length === 0 ? 'max-md:hidden' : ''}`}>
+          <p className="md:hidden text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1">Documents</p>
           <DocumentsCell
             entryId={entry.id}
             docs={entry.documents}

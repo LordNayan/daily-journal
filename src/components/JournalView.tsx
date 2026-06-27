@@ -119,9 +119,9 @@ export function JournalView() {
   return (
     <div className="flex flex-col min-h-screen">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-4">
+      <header className="bg-white border-b border-gray-200 px-3 py-2 flex flex-wrap items-center gap-x-3 gap-y-2">
         <div className="flex items-center gap-2 shrink-0">
-          <img src="/company_logo.png" alt="Convosight" className="h-16 w-auto" />
+          <img src="/company_logo.png" alt="Convosight" className="h-10 sm:h-14 w-auto" />
           <span className="text-sm font-semibold text-brand-navy">Daily Journal</span>
         </div>
 
@@ -134,30 +134,34 @@ export function JournalView() {
         />
 
         {!isToday && (
-          <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-0.5">
+          <span className="hidden sm:inline text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-0.5">
             Viewing past date — read only
           </span>
         )}
 
-        {rolloverTime && <RolloverCountdown rolloverTime={rolloverTime} />}
+        {rolloverTime && (
+          <span className="hidden sm:block">
+            <RolloverCountdown rolloverTime={rolloverTime} />
+          </span>
+        )}
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex items-center gap-2">
           {(session.role === 'pm' || session.role === 'admin' || session.role === 'cto') && isToday && (
-            <div className="flex items-center gap-2">
+            <>
               <button
                 onClick={handleRollover}
                 disabled={rollingOver}
-                className="text-sm bg-brand-teal hover:bg-brand-teal-dark disabled:opacity-50 text-white rounded-md px-3 py-1.5 transition-colors"
+                className="text-xs sm:text-sm bg-brand-teal hover:bg-brand-teal-dark disabled:opacity-50 text-white rounded-md px-2.5 sm:px-3 py-1.5 transition-colors whitespace-nowrap"
               >
-                {rollingOver ? 'Rolling over…' : 'Start new day'}
+                {rollingOver ? 'Rolling…' : 'Start new day'}
               </button>
               {rolloverMsg && (
-                <span className="text-xs text-green-600">{rolloverMsg}</span>
+                <span className="hidden sm:inline text-xs text-green-600">{rolloverMsg}</span>
               )}
-            </div>
+            </>
           )}
 
-          <div className="text-sm text-gray-500 hidden sm:block">
+          <div className="text-sm text-gray-500 hidden md:block">
             {session.name}
             {session.designation && (
               <span className="ml-1 text-xs text-gray-400">· {session.designation}</span>
@@ -176,6 +180,13 @@ export function JournalView() {
           </button>
         </div>
       </header>
+
+      {/* Past-date banner (mobile only) */}
+      {!isToday && (
+        <div className="sm:hidden bg-amber-50 border-b border-amber-200 px-3 py-1.5 text-xs text-amber-600 text-center">
+          Viewing past date — read only
+        </div>
+      )}
 
       {/* Table */}
       <main className="flex-1 overflow-x-auto">
@@ -207,8 +218,8 @@ export function JournalView() {
             </div>
           </div>
         ) : (
-          <table className="w-full border-collapse text-left">
-            <thead className="sticky top-0 z-10">
+          <table className="w-full border-collapse text-left max-md:block">
+            <thead className="sticky top-0 z-10 max-md:hidden">
               <tr className="bg-white border-b-2 border-gray-200 text-xs text-gray-500 uppercase tracking-wide shadow-sm">
                 <th className="px-3 py-2.5 font-semibold w-36">Person</th>
                 <th className="px-3 py-2.5 font-semibold w-44">Stream(s)</th>
@@ -219,7 +230,7 @@ export function JournalView() {
                 <th className="px-3 py-2.5 font-semibold w-44">Documents</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="max-md:block max-md:space-y-2 max-md:p-3">
               {sorted.map((entry) => (
                 <EntryRowComponent
                   key={entry.id}

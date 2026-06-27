@@ -41,7 +41,7 @@ export function StreamPicker({ allStreams, selected, onChange, readOnly }: Props
   }
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative max-md:w-full" ref={ref}>
       <div
         className="flex flex-wrap gap-1 min-h-[28px] cursor-pointer"
         onClick={() => setOpen((o) => !o)}
@@ -69,7 +69,7 @@ export function StreamPicker({ allStreams, selected, onChange, readOnly }: Props
       </div>
 
       {open && (
-        <div className="absolute z-50 top-full left-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+        <div className="absolute z-50 top-full left-0 mt-1 w-64 max-md:w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
           {allStreams.map((s) => {
             const checked = selected.some((x) => x.id === s.id)
             return (
