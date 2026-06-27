@@ -34,6 +34,7 @@ export function InlineCell({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const versionRef = useRef(version)
   const savedRef = useRef(initialValue)
+  const savingRef = useRef<string | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // Keep versionRef in sync when parent updates version
@@ -50,6 +51,8 @@ export function InlineCell({
   const save = useCallback(
     async (val: string, ver: number) => {
       if (val === savedRef.current) return
+      if (savingRef.current === val) return
+      savingRef.current = val
       setSaveState('saving')
       try {
         const res = await fetch(`/api/entries/${entryId}`, {
@@ -79,6 +82,8 @@ export function InlineCell({
         setTimeout(() => setSaveState('idle'), 2000)
       } catch {
         setSaveState('error')
+      } finally {
+        savingRef.current = null
       }
     },
     [entryId, field, onVersionUpdate, onServerUpdate]
