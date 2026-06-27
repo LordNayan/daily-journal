@@ -134,7 +134,7 @@ export async function runRollover(targetDate: string): Promise<number> {
     if (existing.length > 0) continue
 
     const prevRows = await sql`
-      SELECT * FROM entries WHERE "userId" = ${userId} AND date < ${targetDate}
+      SELECT * FROM entries WHERE "userId" = ${userId} AND date < ${targetDate} AND today != ''
       ORDER BY date DESC LIMIT 1
     `
     const prev = prevRows[0] as Entry | undefined

@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { runRollover } from '@/db/repositories/entries'
 import { getSession } from '@/lib/session'
 
-function todayStr() {
-  return new Date().toISOString().split('T')[0]
+function tomorrowStr() {
+  const d = new Date()
+  d.setUTCDate(d.getUTCDate() + 1)
+  return d.toISOString().split('T')[0]
 }
 
 export async function POST(req: NextRequest) {
@@ -21,7 +23,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => ({}))
-  const date = (body as Record<string, string>).date ?? todayStr()
+  const date = (body as Record<string, string>).date ?? tomorrowStr()
   const created = await runRollover(date)
   return NextResponse.json({ ok: true, date, created })
 }
