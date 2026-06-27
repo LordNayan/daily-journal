@@ -15,12 +15,12 @@ export async function GET(req: NextRequest) {
 
   // Lazy rollover: if querying today and rollover hasn't run yet, do it now
   if (date === today) {
-    const lastRollover = getLastRolloverDate()
+    const lastRollover = await getLastRolloverDate()
     if (lastRollover !== today) {
-      runRollover(today)
+      await runRollover(today)
     }
   }
 
-  const entries = listEntriesForDate(date)
+  const entries = await listEntriesForDate(date)
   return NextResponse.json(entries)
 }

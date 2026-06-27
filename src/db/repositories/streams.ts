@@ -1,49 +1,48 @@
-import db from '../index'
+import { sql, ensureReady } from '../index'
 import type { Stream } from '@/types'
 
-export function listStreams(): Stream[] {
-  return db
-    .prepare('SELECT id, name, active FROM streams WHERE active = 1 ORDER BY name')
-    .all() as Stream[]
+export async function listStreams(): Promise<Stream[]> {
+  await ensureReady()
+  return (await sql`SELECT id, name, active FROM streams WHERE active = 1 ORDER BY name`) as Stream[]
 }
 
-export function listAllStreams(): Stream[] {
-  return db
-    .prepare('SELECT id, name, active FROM streams ORDER BY active DESC, name')
-    .all() as Stream[]
+export async function listAllStreams(): Promise<Stream[]> {
+  await ensureReady()
+  return (await sql`SELECT id, name, active FROM streams ORDER BY active DESC, name`) as Stream[]
 }
 
-export function getStreamsForEntry(entryId: number): Stream[] {
-  return db
-    .prepare(
-      `SELECT s.id, s.name, s.active
-       FROM streams s
-       JOIN entry_streams es ON es.streamId = s.id
-       WHERE es.entryId = ?
-       ORDER BY s.name`
-    )
-    .all(entryId) as Stream[]
+export async function getStreamsForEntry(entryId: number): Promise<Stream[]> {
+  await ensureReady()
+  return (await sql`
+    SELECT s.id, s.name, s.active
+    FROM streams s
+    JOIN entry_streams es ON es."streamId" = s.id
+    WHERE es."entryId" = ${entryId}
+    ORDER BY s.name
+  `) as Stream[]
 }
 
-export function setStreamsForEntry(entryId: number, streamIds: number[]): void {
-  const del = db.prepare('DELETE FROM entry_streams WHERE entryId = ?')
-  const ins = db.prepare('INSERT OR IGNORE INTO entry_streams (entryId, streamId) VALUES (?, ?)')
-  db.transaction(() => {
-    del.run(entryId)
-    for (const sid of streamIds) ins.run(entryId, sid)
-  })()
+export async function setStreamsForEntry(entryId: number, streamIds: number[]): Promise<void> {
+  await ensureReady()
+  await sql`DELETE FROM entry_streams WHERE "entryId" = ${entryId}`
+  for (const sid of streamIds) {
+    await sql`INSERT INTO entry_streams ("entryId", "streamId") VALUES (${entryId}, ${sid}) ON CONFLICT DO NOTHING`
+  }
 }
 
-export function createStream(name: string): Stream {
-  const r = db.prepare('INSERT INTO streams (name, active) VALUES (?, 1)').run(name)
-  return db.prepare('SELECT id, name, active FROM streams WHERE id = ?').get(r.lastInsertRowid) as Stream
+export async function createStream(name: string): Promise<Stream> {
+  await ensureReady()
+  const rows = await sql`INSERT INTO streams (name, active) VALUES (${name}, 1) RETURNING id, name, active`
+  return rows[0] as Stream
 }
 
-export function updateStream(id: number, name: string): Stream | undefined {
-  db.prepare('UPDATE streams SET name = ? WHERE id = ?').run(name, id)
-  return db.prepare('SELECT id, name, active FROM streams WHERE id = ?').get(id) as Stream | undefined
+export async function updateStream(id: number, name: string): Promise<Stream | undefined> {
+  await ensureReady()
+  const rows = await sql`UPDATE streams SET name = ${name} WHERE id = ${id} RETURNING id, name, active`
+  return rows[0] as Stream | undefined
 }
 
-export function setStreamActive(id: number, active: boolean): void {
-  db.prepare('UPDATE streams SET active = ? WHERE id = ?').run(active ? 1 : 0, id)
+export async function setStreamActive(id: number, active: boolean): Promise<void> {
+  await ensureReady()
+  await sql`UPDATE streams SET active = ${active ? 1 : 0} WHERE id = ${id}`
 }

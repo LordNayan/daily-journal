@@ -1,70 +1,70 @@
-import db from '../index'
+import { sql, ensureReady } from '../index'
 import bcrypt from 'bcryptjs'
 import type { User } from '@/types'
 
-export function getUserByEmail(email: string): (User & { passwordHash: string; mustChangePassword: number }) | undefined {
-  return db
-    .prepare('SELECT id, name, email, passwordHash, role, designation, mustChangePassword, active FROM users WHERE email = ?')
-    .get(email) as (User & { passwordHash: string; mustChangePassword: number }) | undefined
+export async function getUserByEmail(email: string): Promise<(User & { passwordHash: string; mustChangePassword: number }) | undefined> {
+  await ensureReady()
+  const rows = await sql`
+    SELECT id, name, email, "passwordHash", role, designation, "mustChangePassword", active
+    FROM users WHERE email = ${email}
+  `
+  return rows[0] as (User & { passwordHash: string; mustChangePassword: number }) | undefined
 }
 
-export function getUserById(id: number): User | undefined {
-  return db
-    .prepare('SELECT id, name, email, role, designation, active FROM users WHERE id = ?')
-    .get(id) as User | undefined
+export async function getUserById(id: number): Promise<User | undefined> {
+  await ensureReady()
+  const rows = await sql`SELECT id, name, email, role, designation, active FROM users WHERE id = ${id}`
+  return rows[0] as User | undefined
 }
 
-export function listActiveUsers(): User[] {
-  return db
-    .prepare('SELECT id, name, email, role, designation, active FROM users WHERE active = 1 ORDER BY designation, name')
-    .all() as User[]
+export async function listActiveUsers(): Promise<User[]> {
+  await ensureReady()
+  return (await sql`SELECT id, name, email, role, designation, active FROM users WHERE active = 1 ORDER BY designation, name`) as User[]
 }
 
-export function listAllUsers(): User[] {
-  return db
-    .prepare('SELECT id, name, email, role, designation, active FROM users ORDER BY active DESC, designation, name')
-    .all() as User[]
+export async function listAllUsers(): Promise<User[]> {
+  await ensureReady()
+  return (await sql`SELECT id, name, email, role, designation, active FROM users ORDER BY active DESC, designation, name`) as User[]
 }
 
-export function createUser(data: {
+export async function createUser(data: {
   name: string
   email: string
   password: string
   role: string
   designation: string
-}): User {
+}): Promise<User> {
+  await ensureReady()
   const hash = bcrypt.hashSync(data.password, 10)
-  const r = db
-    .prepare(
-      'INSERT INTO users (name, email, passwordHash, role, designation, mustChangePassword) VALUES (?, ?, ?, ?, ?, 1)'
-    )
-    .run(data.name, data.email, hash, data.role, data.designation)
-  return db
-    .prepare('SELECT id, name, email, role, designation, active FROM users WHERE id = ?')
-    .get(r.lastInsertRowid) as User
+  const rows = await sql`
+    INSERT INTO users (name, email, "passwordHash", role, designation, "mustChangePassword")
+    VALUES (${data.name}, ${data.email}, ${hash}, ${data.role}, ${data.designation}, 1)
+    RETURNING id, name, email, role, designation, active
+  `
+  return rows[0] as User
 }
 
-export function updateUser(
+export async function updateUser(
   id: number,
   data: Partial<{ name: string; email: string; role: string; designation: string }>
-): User | undefined {
-  const fields = Object.entries(data)
-    .filter(([, v]) => v !== undefined)
-    .map(([k]) => `${k} = ?`)
-    .join(', ')
-  const values = Object.values(data).filter((v) => v !== undefined)
-  if (!fields) return getUserById(id)
-  db.prepare(`UPDATE users SET ${fields} WHERE id = ?`).run(...values, id)
-  return db
-    .prepare('SELECT id, name, email, role, designation, active FROM users WHERE id = ?')
-    .get(id) as User | undefined
+): Promise<User | undefined> {
+  await ensureReady()
+  const entries = Object.entries(data).filter(([, v]) => v !== undefined)
+  if (!entries.length) return getUserById(id)
+  const setClauses = entries.map(([k], i) => `"${k}" = $${i + 1}`).join(', ')
+  const values = [...entries.map(([, v]) => v), id]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rows = await (sql as any)(`UPDATE users SET ${setClauses} WHERE id = $${values.length} RETURNING id, name, email, role, designation, active`, values)
+  return rows[0] as User | undefined
 }
 
-export function setUserActive(id: number, active: boolean): void {
-  db.prepare('UPDATE users SET active = ? WHERE id = ?').run(active ? 1 : 0, id)
+export async function setUserActive(id: number, active: boolean): Promise<void> {
+  await ensureReady()
+  await sql`UPDATE users SET active = ${active ? 1 : 0} WHERE id = ${id}`
 }
 
-export function changePassword(userId: number, newPassword: string): void {
+export async function changePassword(userId: number, newPassword: string): Promise<void> {
+  await ensureReady()
   const hash = bcrypt.hashSync(newPassword, 10)
-  db.prepare('UPDATE users SET passwordHash = ?, mustChangePassword = 0 WHERE id = ?').run(hash, userId)
+  await sql`UPDATE users SET "passwordHash" = ${hash}, "mustChangePassword" = 0 WHERE id = ${userId}`
 }

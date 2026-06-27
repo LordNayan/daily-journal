@@ -1,15 +1,21 @@
-import db from '../index'
+import { sql, ensureReady } from '../index'
 
-export function getSetting(key: string): string | undefined {
-  const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as { value: string } | undefined
-  return row?.value
+export async function getSetting(key: string): Promise<string | undefined> {
+  await ensureReady()
+  const rows = await sql`SELECT value FROM settings WHERE key = ${key}`
+  return rows[0]?.value as string | undefined
 }
 
-export function setSetting(key: string, value: string): void {
-  db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(key, value)
+export async function setSetting(key: string, value: string): Promise<void> {
+  await ensureReady()
+  await sql`
+    INSERT INTO settings (key, value) VALUES (${key}, ${value})
+    ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+  `
 }
 
-export function getAllSettings(): Record<string, string> {
-  const rows = db.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[]
-  return Object.fromEntries(rows.map(r => [r.key, r.value]))
+export async function getAllSettings(): Promise<Record<string, string>> {
+  await ensureReady()
+  const rows = await sql`SELECT key, value FROM settings` as { key: string; value: string }[]
+  return Object.fromEntries(rows.map((r) => [r.key, r.value]))
 }

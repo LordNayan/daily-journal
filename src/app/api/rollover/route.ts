@@ -22,6 +22,6 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}))
   const date = (body as Record<string, string>).date ?? todayStr()
-  const created = runRollover(date)
+  const created = await runRollover(date)
   return NextResponse.json({ ok: true, date, created })
 }

@@ -16,20 +16,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (body.role && body.role !== session.role) {
       return NextResponse.json({ error: 'Cannot change your own role' }, { status: 400 })
     }
-    const updated = updateUser(userId, body)
+    const updated = await updateUser(userId, body)
     return NextResponse.json(updated)
   }
 
   const body = await req.json()
 
   if (typeof body.active === 'boolean') {
-    if (!getUserById(userId)) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-    setUserActive(userId, body.active)
+    if (!await getUserById(userId)) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    await setUserActive(userId, body.active)
     return NextResponse.json({ ok: true })
   }
 
   try {
-    const updated = updateUser(userId, {
+    const updated = await updateUser(userId, {
       name: body.name,
       email: body.email,
       role: body.role,

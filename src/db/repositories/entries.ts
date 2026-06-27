@@ -1,46 +1,46 @@
-import db from '../index'
+import { sql, ensureReady } from '../index'
 import type { Entry, EntryRow } from '@/types'
 import { getStreamsForEntry } from './streams'
 import { getDocumentsForEntry } from './documents'
 import { recordHistory } from './history'
 
-function hydrate(entry: Entry): EntryRow {
-  const user = db
-    .prepare('SELECT id, name, email, role, designation, active FROM users WHERE id = ?')
-    .get(entry.userId) as EntryRow['user']
-  return {
-    ...entry,
-    user,
-    streams: getStreamsForEntry(entry.id),
-    documents: getDocumentsForEntry(entry.id),
-  }
+async function hydrate(entry: Entry): Promise<EntryRow> {
+  const users = await sql`SELECT id, name, email, role, designation, active FROM users WHERE id = ${entry.userId}`
+  const [streams, documents] = await Promise.all([
+    getStreamsForEntry(entry.id),
+    getDocumentsForEntry(entry.id),
+  ])
+  return { ...entry, user: users[0] as EntryRow['user'], streams, documents }
 }
 
-export function listEntriesForDate(date: string): EntryRow[] {
-  const entries = db
-    .prepare('SELECT * FROM entries WHERE date = ? ORDER BY userId')
-    .all(date) as Entry[]
-  return entries.map(hydrate)
+export async function listEntriesForDate(date: string): Promise<EntryRow[]> {
+  await ensureReady()
+  const entries = await sql`SELECT * FROM entries WHERE date = ${date} ORDER BY "userId"` as Entry[]
+  return Promise.all(entries.map(hydrate))
 }
 
-export function getEntry(id: number): EntryRow | undefined {
-  const entry = db.prepare('SELECT * FROM entries WHERE id = ?').get(id) as Entry | undefined
+export async function getEntry(id: number): Promise<EntryRow | undefined> {
+  await ensureReady()
+  const rows = await sql`SELECT * FROM entries WHERE id = ${id}`
+  const entry = rows[0] as Entry | undefined
   return entry ? hydrate(entry) : undefined
 }
 
-export function getEntryByDateUser(date: string, userId: number): EntryRow | undefined {
-  const entry = db
-    .prepare('SELECT * FROM entries WHERE date = ? AND userId = ?')
-    .get(date, userId) as Entry | undefined
+export async function getEntryByDateUser(date: string, userId: number): Promise<EntryRow | undefined> {
+  await ensureReady()
+  const rows = await sql`SELECT * FROM entries WHERE date = ${date} AND "userId" = ${userId}`
+  const entry = rows[0] as Entry | undefined
   return entry ? hydrate(entry) : undefined
 }
 
-export function createEntry(date: string, userId: number): EntryRow {
-  db.prepare(
-    `INSERT OR IGNORE INTO entries (date, userId, today, yesterday, rmComments, blockedOn, version)
-     VALUES (?, ?, '', '', '', '', 1)`
-  ).run(date, userId)
-  return getEntryByDateUser(date, userId)!
+export async function createEntry(date: string, userId: number): Promise<EntryRow> {
+  await ensureReady()
+  await sql`
+    INSERT INTO entries (date, "userId", today, yesterday, "rmComments", "blockedOn", version)
+    VALUES (${date}, ${userId}, '', '', '', '', 1)
+    ON CONFLICT DO NOTHING
+  `
+  return (await getEntryByDateUser(date, userId))!
 }
 
 export interface UpdateFieldResult {
@@ -55,128 +55,119 @@ export interface ConflictResult {
   currentEntry: EntryRow
 }
 
-export function updateEntryField(
+export async function updateEntryField(
   entryId: number,
   field: 'today' | 'yesterday' | 'rmComments' | 'blockedOn',
   newValue: string,
   expectedVersion: number,
   editedByUserId: number
-): UpdateFieldResult | ConflictResult {
-  const current = db.prepare('SELECT * FROM entries WHERE id = ?').get(entryId) as Entry | undefined
+): Promise<UpdateFieldResult | ConflictResult> {
+  await ensureReady()
+  const currentRows = await sql`SELECT * FROM entries WHERE id = ${entryId}`
+  const current = currentRows[0] as Entry | undefined
   if (!current) throw new Error('Entry not found')
 
-  const result = db
-    .prepare(
-      `UPDATE entries
-       SET ${field} = ?, version = version + 1, updatedAt = datetime('now')
-       WHERE id = ? AND version = ?`
-    )
-    .run(newValue, entryId, expectedVersion)
-
-  if (result.changes === 0) {
-    // Conflict — version mismatch
-    return { ok: false, conflict: true, currentEntry: hydrate(current) }
+  // Field is validated by the caller (allowedFields check in the route handler)
+  let updated: Record<string, unknown>[]
+  if (field === 'today') {
+    updated = await sql`UPDATE entries SET today = ${newValue}, version = version + 1, "updatedAt" = NOW() WHERE id = ${entryId} AND version = ${expectedVersion} RETURNING *`
+  } else if (field === 'yesterday') {
+    updated = await sql`UPDATE entries SET yesterday = ${newValue}, version = version + 1, "updatedAt" = NOW() WHERE id = ${entryId} AND version = ${expectedVersion} RETURNING *`
+  } else if (field === 'rmComments') {
+    updated = await sql`UPDATE entries SET "rmComments" = ${newValue}, version = version + 1, "updatedAt" = NOW() WHERE id = ${entryId} AND version = ${expectedVersion} RETURNING *`
+  } else {
+    updated = await sql`UPDATE entries SET "blockedOn" = ${newValue}, version = version + 1, "updatedAt" = NOW() WHERE id = ${entryId} AND version = ${expectedVersion} RETURNING *`
   }
 
-  recordHistory(entryId, field, current[field], newValue, editedByUserId)
+  if (updated.length === 0) {
+    return { ok: false, conflict: true, currentEntry: await hydrate(current) }
+  }
 
-  const updated = db.prepare('SELECT * FROM entries WHERE id = ?').get(entryId) as Entry
-  return { ok: true, entry: hydrate(updated), newVersion: updated.version }
+  await recordHistory(entryId, field, current[field] ?? null, newValue, editedByUserId)
+
+  const entry = updated[0] as unknown as Entry
+  return { ok: true, entry: await hydrate(entry), newVersion: entry.version }
 }
 
-export function updateEntryStreams(
+export async function updateEntryStreams(
   entryId: number,
   streamIds: number[],
   expectedVersion: number,
   editedByUserId: number
-): UpdateFieldResult | ConflictResult {
-  const current = db.prepare('SELECT * FROM entries WHERE id = ?').get(entryId) as Entry | undefined
+): Promise<UpdateFieldResult | ConflictResult> {
+  await ensureReady()
+  const currentRows = await sql`SELECT * FROM entries WHERE id = ${entryId}`
+  const current = currentRows[0] as Entry | undefined
   if (!current) throw new Error('Entry not found')
 
-  // Version check (touch version on stream change too)
-  const result = db
-    .prepare(
-      `UPDATE entries SET version = version + 1, updatedAt = datetime('now')
-       WHERE id = ? AND version = ?`
-    )
-    .run(entryId, expectedVersion)
+  const updated = await sql`
+    UPDATE entries SET version = version + 1, "updatedAt" = NOW()
+    WHERE id = ${entryId} AND version = ${expectedVersion}
+    RETURNING *
+  `
 
-  if (result.changes === 0) {
-    return { ok: false, conflict: true, currentEntry: hydrate(current) }
+  if (updated.length === 0) {
+    return { ok: false, conflict: true, currentEntry: await hydrate(current) }
   }
 
-  const oldStreams = getStreamsForEntry(entryId)
-    .map((s) => s.name)
-    .join(', ')
+  const oldStreams = (await getStreamsForEntry(entryId)).map((s) => s.name).join(', ')
 
-  const del = db.prepare('DELETE FROM entry_streams WHERE entryId = ?')
-  const ins = db.prepare('INSERT OR IGNORE INTO entry_streams (entryId, streamId) VALUES (?, ?)')
-  db.transaction(() => {
-    del.run(entryId)
-    for (const sid of streamIds) ins.run(entryId, sid)
-  })()
+  await sql`DELETE FROM entry_streams WHERE "entryId" = ${entryId}`
+  for (const sid of streamIds) {
+    await sql`INSERT INTO entry_streams ("entryId", "streamId") VALUES (${entryId}, ${sid}) ON CONFLICT DO NOTHING`
+  }
 
-  const newStreams = getStreamsForEntry(entryId)
-    .map((s) => s.name)
-    .join(', ')
-  recordHistory(entryId, 'streams', oldStreams, newStreams, editedByUserId)
+  const newStreams = (await getStreamsForEntry(entryId)).map((s) => s.name).join(', ')
+  await recordHistory(entryId, 'streams', oldStreams, newStreams, editedByUserId)
 
-  const updated = db.prepare('SELECT * FROM entries WHERE id = ?').get(entryId) as Entry
-  return { ok: true, entry: hydrate(updated), newVersion: updated.version }
+  const entry = updated[0] as Entry
+  return { ok: true, entry: await hydrate(entry), newVersion: entry.version }
 }
 
-/** Idempotent daily rollover. Returns count of new rows created. */
-export function runRollover(targetDate: string): number {
-  const users = db
-    .prepare("SELECT id FROM users WHERE active = 1 AND role != 'ceo'")
-    .all() as { id: number }[]
+export async function runRollover(targetDate: string): Promise<number> {
+  await ensureReady()
+  const users = await sql`SELECT id FROM users WHERE active = 1 AND role != 'ceo'`
 
   let created = 0
   for (const { id: userId } of users) {
-    // Skip if entry already exists (UNIQUE constraint)
-    const existing = db
-      .prepare('SELECT id FROM entries WHERE date = ? AND userId = ?')
-      .get(targetDate, userId)
-    if (existing) continue
+    const existing = await sql`SELECT id FROM entries WHERE date = ${targetDate} AND "userId" = ${userId}`
+    if (existing.length > 0) continue
 
-    // Find the most recent previous entry for carry-over
-    const prev = db
-      .prepare("SELECT * FROM entries WHERE userId = ? AND date < ? ORDER BY date DESC LIMIT 1")
-      .get(userId, targetDate) as Entry | undefined
+    const prevRows = await sql`
+      SELECT * FROM entries WHERE "userId" = ${userId} AND date < ${targetDate}
+      ORDER BY date DESC LIMIT 1
+    `
+    const prev = prevRows[0] as Entry | undefined
 
-    db.prepare(
-      `INSERT OR IGNORE INTO entries (date, userId, today, yesterday, rmComments, blockedOn, version)
-       VALUES (?, ?, '', ?, '', '', 1)`
-    ).run(targetDate, userId, prev?.today ?? '')
+    const inserted = await sql`
+      INSERT INTO entries (date, "userId", today, yesterday, "rmComments", "blockedOn", version)
+      VALUES (${targetDate}, ${userId}, '', ${prev?.today ?? ''}, '', '', 1)
+      ON CONFLICT DO NOTHING
+      RETURNING id
+    `
 
-    const newEntry = db
-      .prepare('SELECT id FROM entries WHERE date = ? AND userId = ?')
-      .get(targetDate, userId) as { id: number } | undefined
-
-    // Copy streams from the previous entry
-    if (newEntry && prev) {
-      const prevStreams = db
-        .prepare('SELECT streamId FROM entry_streams WHERE entryId = ?')
-        .all(prev.id) as { streamId: number }[]
-      const ins = db.prepare('INSERT OR IGNORE INTO entry_streams (entryId, streamId) VALUES (?, ?)')
-      for (const { streamId } of prevStreams) {
-        ins.run(newEntry.id, streamId)
+    if (inserted.length > 0) {
+      created++
+      if (prev) {
+        const newEntryId = inserted[0].id
+        const prevStreams = await sql`SELECT "streamId" FROM entry_streams WHERE "entryId" = ${prev.id}`
+        for (const { streamId } of prevStreams) {
+          await sql`INSERT INTO entry_streams ("entryId", "streamId") VALUES (${newEntryId}, ${streamId}) ON CONFLICT DO NOTHING`
+        }
       }
     }
-    created++
   }
 
-  db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(
-    'last_rollover_date',
-    targetDate
-  )
+  await sql`
+    INSERT INTO settings (key, value) VALUES ('last_rollover_date', ${targetDate})
+    ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+  `
 
   return created
 }
 
-export function getLastRolloverDate(): string {
-  const row = db.prepare("SELECT value FROM settings WHERE key = 'last_rollover_date'").get() as
-    | { value: string }
-    | undefined
-  return row?.value ?? ''
+export async function getLastRolloverDate(): Promise<string> {
+  await ensureReady()
+  const rows = await sql`SELECT value FROM settings WHERE key = 'last_rollover_date'`
+  return (rows[0]?.value as string) ?? ''
 }

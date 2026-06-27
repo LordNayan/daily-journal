@@ -24,7 +24,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const session = await getSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const entry = getEntry(Number(id))
+  const entry = await getEntry(Number(id))
   if (!entry) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   return NextResponse.json(entry)
 }
@@ -34,7 +34,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const session = await getSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const entry = getEntry(Number(id))
+  const entry = await getEntry(Number(id))
   if (!entry) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const body = await req.json()
@@ -51,7 +51,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (!Array.isArray(streamIds)) {
       return NextResponse.json({ error: 'streamIds required' }, { status: 400 })
     }
-    const result = updateEntryStreams(Number(id), streamIds, version, session.userId)
+    const result = await updateEntryStreams(Number(id), streamIds, version, session.userId)
     if (!result.ok) {
       return NextResponse.json(
         { error: 'Conflict', currentEntry: result.currentEntry },
@@ -70,7 +70,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const result = updateEntryField(Number(id), field as AllowedField, value ?? '', version, session.userId)
+  const result = await updateEntryField(Number(id), field as AllowedField, value ?? '', version, session.userId)
   if (!result.ok) {
     return NextResponse.json(
       { error: 'Conflict', currentEntry: result.currentEntry },

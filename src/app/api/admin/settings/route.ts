@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSetting, setSetting } from '@/db/repositories/settings'
 
 export async function GET() {
-  const rolloverTime = getSetting('rollover_time') ?? '14:30'
+  const rolloverTime = (await getSetting('rollover_time')) ?? '14:30'
   return NextResponse.json({ rolloverTime })
 }
 
@@ -15,6 +15,6 @@ export async function PATCH(req: NextRequest) {
   if (h < 0 || h > 23 || m < 0 || m > 59) {
     return NextResponse.json({ error: 'Invalid time' }, { status: 400 })
   }
-  setSetting('rollover_time', rolloverTime)
+  await setSetting('rollover_time', rolloverTime)
   return NextResponse.json({ ok: true, rolloverTime })
 }

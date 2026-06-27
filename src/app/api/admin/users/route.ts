@@ -5,7 +5,7 @@ const VALID_ROLES = ['engineer', 'cto', 'pm', 'admin', 'ceo']
 const VALID_DESIGNATIONS = ['BE', 'FE', 'PM', 'QA', 'AI', 'Design', 'DevOps', 'CTO']
 
 export async function GET() {
-  return NextResponse.json(listAllUsers())
+  return NextResponse.json(await listAllUsers())
 }
 
 export async function POST(req: NextRequest) {
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const user = createUser({ name: name.trim(), email: email.trim(), password, role, designation })
+    const user = await createUser({ name: name.trim(), email: email.trim(), password, role, designation })
     return NextResponse.json(user, { status: 201 })
   } catch {
     return NextResponse.json({ error: 'Email already in use' }, { status: 409 })

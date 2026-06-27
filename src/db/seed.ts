@@ -1,9 +1,5 @@
-import type Database from 'better-sqlite3'
+import { sql } from './client'
 import bcrypt from 'bcryptjs'
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Edit these two arrays to customise the streams and team in one place
-// ─────────────────────────────────────────────────────────────────────────────
 
 export const STREAMS = [
   'AC1 Data · Rust · backend',
@@ -28,8 +24,6 @@ export const STREAMS = [
   'Risk prevention',
 ]
 
-// role: permission level (engineer | cto | pm | admin | ceo)
-// designation: display label shown in the UI (BE, FE, PM, QA, AI, Design, DevOps, CTO)
 const SEED_USERS: {
   name: string
   email: string
@@ -71,7 +65,7 @@ const SEED_USERS: {
   // ── DevOps ──
   { name: 'Sergey S', email: 'sergey@convosight.com', password: 'sergey123', role: 'engineer', designation: 'DevOps' },
   { name: 'Nirali', email: 'nirali@convosight.com', password: 'nirali123', role: 'engineer', designation: 'DevOps' },
-  // ── CTO (RM Comments author) ──
+  // ── CTO ──
   { name: 'Rohit Mahajan', email: 'rohit@convosight.com', password: 'rohit123', role: 'cto', designation: 'CTO' },
 ]
 
@@ -81,41 +75,33 @@ function daysAgo(n: number): string {
   return d.toISOString().split('T')[0]
 }
 
-export function seedDatabase(db: Database.Database): void {
-  // Streams
-  const insertStream = db.prepare('INSERT OR IGNORE INTO streams (name) VALUES (?)')
+export async function maybeSeed(): Promise<void> {
+  const rows = await sql`SELECT COUNT(*) AS count FROM users`
+  if (Number(rows[0].count) === 0) {
+    await seedDatabase()
+  }
+}
+
+export async function seedDatabase(): Promise<void> {
   for (const name of STREAMS) {
-    insertStream.run(name)
+    await sql`INSERT INTO streams (name) VALUES (${name}) ON CONFLICT DO NOTHING`
   }
 
-  // Users
-  const insertUser = db.prepare(
-    'INSERT OR IGNORE INTO users (name, email, passwordHash, role, designation) VALUES (?, ?, ?, ?, ?)'
-  )
   for (const u of SEED_USERS) {
-    insertUser.run(u.name, u.email, bcrypt.hashSync(u.password, 10), u.role, u.designation)
+    const hash = bcrypt.hashSync(u.password, 10)
+    await sql`
+      INSERT INTO users (name, email, "passwordHash", role, designation, "mustChangePassword")
+      VALUES (${u.name}, ${u.email}, ${hash}, ${u.role}, ${u.designation}, 1)
+      ON CONFLICT DO NOTHING
+    `
   }
 
-  // Settings defaults
-  db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)').run('rollover_time', '14:30')
-  db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)').run('last_rollover_date', '')
+  await sql`INSERT INTO settings (key, value) VALUES ('rollover_time', '14:30') ON CONFLICT DO NOTHING`
+  await sql`INSERT INTO settings (key, value) VALUES ('last_rollover_date', '') ON CONFLICT DO NOTHING`
 
-  // Seed two days of sample entries for BE engineers
-  const beEngineers = db
-    .prepare("SELECT id, name FROM users WHERE designation = 'BE'")
-    .all() as { id: number; name: string }[]
-
-  const allStreams = db.prepare('SELECT id, name FROM streams').all() as { id: number; name: string }[]
-  const streamByName = Object.fromEntries(allStreams.map((s) => [s.name, s.id]))
-
-  const insertEntry = db.prepare(`
-    INSERT OR IGNORE INTO entries (date, userId, today, yesterday, rmComments, blockedOn, version)
-    VALUES (?, ?, ?, ?, ?, ?, 1)
-  `)
-  const insertEntryStream = db.prepare(
-    'INSERT OR IGNORE INTO entry_streams (entryId, streamId) VALUES (?, ?)'
-  )
-  const getEntry = db.prepare('SELECT id FROM entries WHERE date = ? AND userId = ?')
+  const beEngineers = await sql`SELECT id, name FROM users WHERE designation = 'BE'`
+  const allStreams = await sql`SELECT id, name FROM streams`
+  const streamByName = Object.fromEntries(allStreams.map((s) => [s.name as string, s.id as number]))
 
   const sampleData: { today: string; yesterday: string; streams: string[] }[] = [
     {
@@ -152,21 +138,33 @@ export function seedDatabase(db: Database.Database): void {
 
   for (let daysBack = 2; daysBack >= 1; daysBack--) {
     const date = daysAgo(daysBack)
-    beEngineers.forEach((eng, idx) => {
-      const sample = sampleData[idx % sampleData.length]
+    for (let i = 0; i < beEngineers.length; i++) {
+      const eng = beEngineers[i]
+      const sample = sampleData[i % sampleData.length]
       const todayText = daysBack === 1 ? sample.today : sample.yesterday
       const yestText = daysBack === 2 ? '' : sample.yesterday
-      insertEntry.run(date, eng.id, todayText, yestText, '', '')
-      const entry = getEntry.get(date, eng.id) as { id: number } | undefined
+
+      await sql`
+        INSERT INTO entries (date, "userId", today, yesterday, "rmComments", "blockedOn", version)
+        VALUES (${date}, ${eng.id}, ${todayText}, ${yestText}, '', '', 1)
+        ON CONFLICT DO NOTHING
+      `
+
+      const entryRows = await sql`SELECT id FROM entries WHERE date = ${date} AND "userId" = ${eng.id}`
+      const entry = entryRows[0]
       if (entry) {
         for (const sName of sample.streams) {
           const sId = streamByName[sName]
-          if (sId) insertEntryStream.run(entry.id, sId)
+          if (sId) {
+            await sql`
+              INSERT INTO entry_streams ("entryId", "streamId") VALUES (${entry.id}, ${sId})
+              ON CONFLICT DO NOTHING
+            `
+          }
         }
       }
-    })
+    }
   }
 
-  // Mark last_rollover_date as yesterday so the first page load triggers lazy rollover
-  db.prepare("UPDATE settings SET value = ? WHERE key = 'last_rollover_date'").run(daysAgo(1))
+  await sql`UPDATE settings SET value = ${daysAgo(1)} WHERE key = 'last_rollover_date'`
 }

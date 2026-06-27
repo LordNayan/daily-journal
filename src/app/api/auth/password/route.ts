@@ -12,7 +12,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 })
   }
 
-  changePassword(session.userId, newPassword)
+  await changePassword(session.userId, newPassword)
 
   // Re-issue token with mustChangePassword = false
   const newToken = await signSession({ ...session, mustChangePassword: false })

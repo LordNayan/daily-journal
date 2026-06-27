@@ -6,5 +6,5 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params
   const session = await getSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  return NextResponse.json(getHistoryForEntry(Number(id)))
+  return NextResponse.json(await getHistoryForEntry(Number(id)))
 }

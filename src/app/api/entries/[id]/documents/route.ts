@@ -8,7 +8,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const session = await getSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const entry = getEntry(Number(id))
+  const entry = await getEntry(Number(id))
   if (!entry) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   if (session.userId !== entry.userId && session.role !== 'pm') {
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { label, url, fileData, fileName, mimeType } = body
   if (!label) return NextResponse.json({ error: 'label required' }, { status: 400 })
 
-  const doc = addDocument(Number(id), { label, url, fileData, fileName, mimeType })
+  const doc = await addDocument(Number(id), { label, url, fileData, fileName, mimeType })
   return NextResponse.json(doc, { status: 201 })
 }
 
@@ -28,7 +28,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const session = await getSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const entry = getEntry(Number(id))
+  const entry = await getEntry(Number(id))
   if (!entry) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   if (session.userId !== entry.userId && session.role !== 'pm') {
@@ -36,6 +36,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   }
 
   const { docId } = await req.json()
-  const ok = deleteDocument(docId, Number(id))
+  const ok = await deleteDocument(docId, Number(id))
   return NextResponse.json({ ok })
 }

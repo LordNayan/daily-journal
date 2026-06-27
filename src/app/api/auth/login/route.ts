@@ -10,12 +10,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email and password required' }, { status: 400 })
     }
 
-    const user = getUserByEmail(email)
+    const user = await getUserByEmail(email)
     if (!user || !bcrypt.compareSync(password, user.passwordHash)) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
 
-    const mustChangePassword = !!(user as typeof user & { mustChangePassword: number }).mustChangePassword
+    const mustChangePassword = !!user.mustChangePassword
 
     const token = await signSession({
       userId: user.id,
