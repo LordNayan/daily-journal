@@ -1,5 +1,6 @@
 import { sql, ensureReady } from '../index'
 import bcrypt from 'bcryptjs'
+import { randomBytes } from 'crypto'
 import type { User } from '@/types'
 
 export async function getUserByEmail(email: string): Promise<(User & { passwordHash: string; mustChangePassword: number }) | undefined> {
@@ -61,6 +62,15 @@ export async function updateUser(
 export async function setUserActive(id: number, active: boolean): Promise<void> {
   await ensureReady()
   await sql`UPDATE users SET active = ${active ? 1 : 0} WHERE id = ${id}`
+}
+
+export async function resetPassword(id: number): Promise<string> {
+  await ensureReady()
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
+  const temp = Array.from(randomBytes(8)).map((b) => chars[b % chars.length]).join('')
+  const hash = bcrypt.hashSync(temp, 10)
+  await sql`UPDATE users SET "passwordHash" = ${hash}, "mustChangePassword" = 1 WHERE id = ${id}`
+  return temp
 }
 
 export async function changePassword(userId: number, newPassword: string): Promise<void> {

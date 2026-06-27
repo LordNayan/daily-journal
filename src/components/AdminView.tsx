@@ -188,6 +188,8 @@ function PeopleTab() {
   const [form, setForm] = useState<UserForm>(EMPTY_FORM)
   const [formError, setFormError] = useState('')
   const [confirmDeactivate, setConfirmDeactivate] = useState<User | null>(null)
+  const [resetResult, setResetResult] = useState<{ name: string; password: string } | null>(null)
+  const [resetting, setResetting] = useState<number | null>(null)
 
   useEffect(() => {
     fetch('/api/admin/users').then(r => r.json()).then(setUsers).finally(() => setLoading(false))
@@ -224,6 +226,16 @@ function PeopleTab() {
     const updated = await res.json()
     setUsers(prev => prev.map(u => u.id === editUser.id ? { ...u, ...updated } : u))
     setEditUser(null)
+  }
+
+  async function handleResetPassword(user: User) {
+    setResetting(user.id)
+    const res = await fetch(`/api/admin/users/${user.id}/reset-password`, { method: 'POST' })
+    setResetting(null)
+    if (res.ok) {
+      const { tempPassword } = await res.json()
+      setResetResult({ name: user.name, password: tempPassword })
+    }
   }
 
   async function handleToggleActive(user: User) {
@@ -328,6 +340,13 @@ function PeopleTab() {
               </td>
               <td className="py-2 text-right space-x-3 whitespace-nowrap">
                 <button onClick={() => openEdit(u)} className="text-xs text-gray-400 hover:text-blue-600">Edit</button>
+                <button
+                  onClick={() => handleResetPassword(u)}
+                  disabled={resetting === u.id}
+                  className="text-xs text-amber-500 hover:text-amber-700 disabled:opacity-50"
+                >
+                  {resetting === u.id ? 'Resetting…' : 'Reset password'}
+                </button>
                 {u.active ? (
                   <button onClick={() => setConfirmDeactivate(u)} className="text-xs text-red-400 hover:text-red-600">
                     Remove
@@ -356,6 +375,37 @@ function PeopleTab() {
         <Modal title={`Edit — ${editUser.name}`} onClose={() => setEditUser(null)}>
           <form onSubmit={handleEdit}><FormFields /></form>
         </Modal>
+      )}
+
+      {/* Reset password result */}
+      {resetResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 space-y-4">
+            <h3 className="text-sm font-semibold text-gray-900">Temporary password for {resetResult.name}</h3>
+            <p className="text-xs text-gray-500">
+              Share this with them over Slack. They&apos;ll be asked to change it on next login.
+            </p>
+            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+              <code className="flex-1 text-sm font-mono tracking-widest text-gray-800 select-all">
+                {resetResult.password}
+              </code>
+              <button
+                onClick={() => navigator.clipboard.writeText(resetResult!.password)}
+                className="text-xs text-blue-600 hover:text-blue-800 font-medium shrink-0"
+              >
+                Copy
+              </button>
+            </div>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setResetResult(null)}
+                className="text-sm bg-gray-900 hover:bg-gray-700 text-white rounded-lg px-4 py-1.5 font-medium"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Deactivate confirm */}
