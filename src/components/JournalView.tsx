@@ -177,7 +177,7 @@ export function JournalView() {
             )}
             <button
               onClick={handleLogout}
-              className="text-sm text-gray-400 hover:text-gray-600 underline"
+              className="text-sm border border-gray-300 text-gray-500 hover:border-red-400 hover:text-red-500 font-medium px-3 py-1.5 rounded-md transition-colors"
             >
               Logout
             </button>
