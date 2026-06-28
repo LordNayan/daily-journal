@@ -470,7 +470,7 @@ function SettingsTab() {
         <p className="text-xs text-gray-500 mb-4">
           All journal rows roll over at this time every day (UTC). Yesterday&apos;s &ldquo;Today&rdquo;
           becomes &ldquo;Yesterday&rdquo; and fields are cleared for the new day.
-          After changing this, update the cron schedule in <code className="bg-gray-100 px-1 rounded">vercel.json</code> to match.
+          This is the only config you need to change — the cron picks it up automatically.
         </p>
         <form onSubmit={handleSave} className="flex items-center gap-3">
           <div>

@@ -72,7 +72,7 @@ export function RolloverCountdown({ rolloverTime }: Props) {
           ? 'bg-amber-50 border-amber-200 text-amber-700'
           : 'bg-gray-50 border-gray-200 text-gray-500'
       }`}
-      title={`Rollover: ${localTime} (your local time)`}
+      title={`Rollover at ${formatUTC(rolloverTime)}`}
     >
       <span className={`w-1.5 h-1.5 rounded-full ${imminent ? 'bg-amber-400 animate-pulse' : 'bg-gray-300'}`} />
       <span>
