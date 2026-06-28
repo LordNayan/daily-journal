@@ -75,7 +75,7 @@ export function RolloverCountdown({ rolloverTime, compact = false }: Props) {
     return (
       <div className={pillCls} title={`Rollover ${dayLabel.toLowerCase()} at ${formatUTC(rolloverTime)}`}>
         <span className={dotCls} />
-        <span className={imminent ? 'font-semibold' : ''}>in {countdown}</span>
+        <span className={imminent ? 'font-semibold' : ''}>Rollover in {countdown}</span>
       </div>
     )
   }
