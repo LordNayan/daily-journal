@@ -171,8 +171,8 @@ export function JournalView() {
               )}
             </div>
             {(session.role === 'admin' || session.role === 'cto') && (
-              <a href="/admin" className="text-sm text-brand-teal hover:text-brand-navy font-medium">
-                Admin
+              <a href="/admin" className="text-sm border border-brand-teal text-brand-teal hover:bg-brand-teal hover:text-white font-medium px-3 py-1.5 rounded-md transition-colors whitespace-nowrap">
+                Admin Panel
               </a>
             )}
             <button
