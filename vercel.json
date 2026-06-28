@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/rollover",
-      "schedule": "*/30 * * * *"
+      "schedule": "30 11 * * *"
     }
   ]
 }
