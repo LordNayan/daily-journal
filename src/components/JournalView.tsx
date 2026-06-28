@@ -119,65 +119,97 @@ export function JournalView() {
   return (
     <div className="flex flex-col min-h-screen">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-3 py-2 flex flex-wrap items-center gap-x-3 gap-y-2">
-        <div className="flex items-center gap-2 shrink-0">
-          <img src="/company_logo.png" alt="Convosight" className="h-10 sm:h-14 w-auto" />
-          <span className="text-sm font-semibold text-brand-navy">Daily Journal</span>
+      <header className="bg-white border-b border-gray-200">
+        {/* Top row: logo + nav actions */}
+        <div className="px-3 py-2 flex items-center gap-x-3">
+          <div className="flex items-center gap-2 shrink-0">
+            <img src="/company_logo.png" alt="Convosight" className="h-10 sm:h-14 w-auto" />
+            <span className="text-sm font-semibold text-brand-navy">Daily Journal</span>
+          </div>
+
+          {/* Desktop-only controls in top row */}
+          <input
+            type="date"
+            value={date}
+            max={todayStr()}
+            onChange={(e) => setDate(e.target.value)}
+            className="hidden sm:block border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"
+          />
+
+          {!isToday && (
+            <span className="hidden sm:inline text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-0.5">
+              Viewing past date — read only
+            </span>
+          )}
+
+          {rolloverTime && (
+            <span className="hidden sm:block">
+              <RolloverCountdown rolloverTime={rolloverTime} />
+            </span>
+          )}
+
+          <div className="ml-auto flex items-center gap-2">
+            {(session.role === 'pm' || session.role === 'admin' || session.role === 'cto') && isToday && (
+              <>
+                <button
+                  onClick={handleRollover}
+                  disabled={rollingOver}
+                  className="hidden sm:block text-sm bg-brand-teal hover:bg-brand-teal-dark disabled:opacity-50 text-white rounded-md px-3 py-1.5 transition-colors whitespace-nowrap"
+                >
+                  {rollingOver ? 'Rolling…' : 'Start new day'}
+                </button>
+                {rolloverMsg && (
+                  <span className="hidden sm:inline text-xs text-green-600">{rolloverMsg}</span>
+                )}
+              </>
+            )}
+
+            <div className="text-sm text-gray-500 hidden md:block">
+              {session.name}
+              {session.designation && (
+                <span className="ml-1 text-xs text-gray-400">· {session.designation}</span>
+              )}
+            </div>
+            {(session.role === 'admin' || session.role === 'cto') && (
+              <a href="/admin" className="text-sm text-brand-teal hover:text-brand-navy font-medium">
+                Admin
+              </a>
+            )}
+            <button
+              onClick={handleLogout}
+              className="text-sm text-gray-400 hover:text-gray-600 underline"
+            >
+              Logout
+            </button>
+          </div>
         </div>
 
-        <input
-          type="date"
-          value={date}
-          max={todayStr()}
-          onChange={(e) => setDate(e.target.value)}
-          className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"
-        />
-
-        {!isToday && (
-          <span className="hidden sm:inline text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-0.5">
-            Viewing past date — read only
-          </span>
-        )}
-
-        {rolloverTime && (
-          <span className="hidden sm:block">
-            <RolloverCountdown rolloverTime={rolloverTime} />
-          </span>
-        )}
-
-        <div className="ml-auto flex items-center gap-2">
+        {/* Mobile-only bottom row: date picker + rollover button + compact countdown */}
+        <div className="sm:hidden border-t border-gray-100 px-3 py-2 flex items-center gap-2">
+          <input
+            type="date"
+            value={date}
+            max={todayStr()}
+            onChange={(e) => setDate(e.target.value)}
+            className="border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"
+          />
           {(session.role === 'pm' || session.role === 'admin' || session.role === 'cto') && isToday && (
-            <>
-              <button
-                onClick={handleRollover}
-                disabled={rollingOver}
-                className="text-xs sm:text-sm bg-brand-teal hover:bg-brand-teal-dark disabled:opacity-50 text-white rounded-md px-2.5 sm:px-3 py-1.5 transition-colors whitespace-nowrap"
-              >
-                {rollingOver ? 'Rolling…' : 'Start new day'}
-              </button>
-              {rolloverMsg && (
-                <span className="hidden sm:inline text-xs text-green-600">{rolloverMsg}</span>
-              )}
-            </>
+            <button
+              onClick={handleRollover}
+              disabled={rollingOver}
+              className="text-xs bg-brand-teal hover:bg-brand-teal-dark disabled:opacity-50 text-white rounded-md px-2.5 py-1.5 transition-colors whitespace-nowrap"
+            >
+              {rollingOver ? 'Rolling…' : 'Start new day'}
+            </button>
           )}
-
-          <div className="text-sm text-gray-500 hidden md:block">
-            {session.name}
-            {session.designation && (
-              <span className="ml-1 text-xs text-gray-400">· {session.designation}</span>
-            )}
-          </div>
-          {(session.role === 'admin' || session.role === 'cto') && (
-            <a href="/admin" className="text-sm text-brand-teal hover:text-brand-navy font-medium">
-              Admin
-            </a>
+          {rolloverMsg && (
+            <span className="text-xs text-green-600 truncate">{rolloverMsg}</span>
           )}
-          <button
-            onClick={handleLogout}
-            className="text-sm text-gray-400 hover:text-gray-600 underline"
-          >
-            Logout
-          </button>
+          {rolloverTime && (
+            <span className="ml-auto shrink-0">
+              <RolloverCountdown rolloverTime={rolloverTime} compact />
+            </span>
+          )}
         </div>
       </header>
 

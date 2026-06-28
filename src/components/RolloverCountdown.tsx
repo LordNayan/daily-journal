@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 
 interface Props {
   rolloverTime: string // "HH:MM" UTC
+  compact?: boolean
 }
 
 function getNextRollover(hhmm: string): Date {
@@ -42,7 +43,7 @@ function isToday(next: Date): boolean {
   return next.toDateString() === now.toDateString()
 }
 
-export function RolloverCountdown({ rolloverTime }: Props) {
+export function RolloverCountdown({ rolloverTime, compact = false }: Props) {
   const [countdown, setCountdown] = useState('')
   const [localTime, setLocalTime] = useState('')
   const [dayLabel, setDayLabel] = useState('')
@@ -65,16 +66,23 @@ export function RolloverCountdown({ rolloverTime }: Props) {
 
   if (!countdown) return null
 
+  const pillCls = `flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition-colors ${
+    imminent ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-gray-50 border-gray-200 text-gray-500'
+  }`
+  const dotCls = `w-1.5 h-1.5 rounded-full shrink-0 ${imminent ? 'bg-amber-400 animate-pulse' : 'bg-gray-300'}`
+
+  if (compact) {
+    return (
+      <div className={pillCls} title={`Rollover ${dayLabel.toLowerCase()} at ${formatUTC(rolloverTime)}`}>
+        <span className={dotCls} />
+        <span className={imminent ? 'font-semibold' : ''}>in {countdown}</span>
+      </div>
+    )
+  }
+
   return (
-    <div
-      className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition-colors ${
-        imminent
-          ? 'bg-amber-50 border-amber-200 text-amber-700'
-          : 'bg-gray-50 border-gray-200 text-gray-500'
-      }`}
-      title={`Rollover at ${formatUTC(rolloverTime)}`}
-    >
-      <span className={`w-1.5 h-1.5 rounded-full ${imminent ? 'bg-amber-400 animate-pulse' : 'bg-gray-300'}`} />
+    <div className={pillCls} title={`Rollover at ${formatUTC(rolloverTime)}`}>
+      <span className={dotCls} />
       <span>
         Rollover {dayLabel.toLowerCase()} at{' '}
         <span className="font-medium">{formatUTC(rolloverTime)}</span>

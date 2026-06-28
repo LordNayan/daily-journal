@@ -50,6 +50,7 @@ function StreamsTab() {
   const [addError, setAddError] = useState('')
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editName, setEditName] = useState('')
+  const [confirmDeactivate, setConfirmDeactivate] = useState<Stream | null>(null)
 
   useEffect(() => {
     fetch('/api/admin/streams').then(r => r.json()).then(setStreams).finally(() => setLoading(false))
@@ -112,6 +113,27 @@ function StreamsTab() {
       </form>
       {addError && <p className="text-xs text-red-500">{addError}</p>}
 
+      {/* Deactivate stream confirm */}
+      {confirmDeactivate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 space-y-4">
+            <h3 className="text-sm font-semibold text-gray-900">Deactivate &ldquo;{confirmDeactivate.name}&rdquo;?</h3>
+            <p className="text-sm text-gray-500">
+              This stream will be hidden from new journal rows. Existing entries are preserved.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setConfirmDeactivate(null)} className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5">Cancel</button>
+              <button
+                onClick={() => { handleToggleActive(confirmDeactivate); setConfirmDeactivate(null) }}
+                className="text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg px-4 py-1.5 font-medium"
+              >
+                Deactivate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className="overflow-x-auto">
       <table className="w-full text-sm border-collapse">
@@ -157,7 +179,7 @@ function StreamsTab() {
                   Rename
                 </button>
                 <button
-                  onClick={() => handleToggleActive(s)}
+                  onClick={() => s.active ? setConfirmDeactivate(s) : handleToggleActive(s)}
                   className={`text-xs ${s.active ? 'text-red-400 hover:text-red-600' : 'text-green-500 hover:text-green-700'}`}
                 >
                   {s.active ? 'Deactivate' : 'Reactivate'}
@@ -188,6 +210,7 @@ function PeopleTab() {
   const [form, setForm] = useState<UserForm>(EMPTY_FORM)
   const [formError, setFormError] = useState('')
   const [confirmDeactivate, setConfirmDeactivate] = useState<User | null>(null)
+  const [confirmReset, setConfirmReset] = useState<User | null>(null)
   const [resetResult, setResetResult] = useState<{ name: string; password: string } | null>(null)
   const [resetting, setResetting] = useState<number | null>(null)
   const [showPassword, setShowPassword] = useState(false)
@@ -360,7 +383,7 @@ function PeopleTab() {
               <td className="py-2 text-right space-x-3 whitespace-nowrap">
                 <button onClick={() => openEdit(u)} className="text-xs text-gray-400 hover:text-blue-600">Edit</button>
                 <button
-                  onClick={() => handleResetPassword(u)}
+                  onClick={() => setConfirmReset(u)}
                   disabled={resetting === u.id}
                   className="text-xs text-amber-500 hover:text-amber-700 disabled:opacity-50"
                 >
@@ -421,6 +444,27 @@ function PeopleTab() {
                 className="text-sm bg-gray-900 hover:bg-gray-700 text-white rounded-lg px-4 py-1.5 font-medium"
               >
                 Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset password confirm */}
+      {confirmReset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 space-y-4">
+            <h3 className="text-sm font-semibold text-gray-900">Reset password for {confirmReset.name}?</h3>
+            <p className="text-sm text-gray-500">
+              A temporary password will be generated. They&apos;ll be asked to change it on next login.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setConfirmReset(null)} className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5">Cancel</button>
+              <button
+                onClick={() => { handleResetPassword(confirmReset); setConfirmReset(null) }}
+                className="text-sm bg-amber-600 hover:bg-amber-700 text-white rounded-lg px-4 py-1.5 font-medium"
+              >
+                Reset password
               </button>
             </div>
           </div>
