@@ -36,6 +36,7 @@ export function InlineCell({
   const savedRef = useRef(initialValue)
   const savingRef = useRef<string | null>(null)
   const focusValueRef = useRef(initialValue)
+  const saveStateRef = useRef<SaveState>('idle')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // Keep versionRef in sync when parent updates version
@@ -49,6 +50,11 @@ export function InlineCell({
     savedRef.current = initialValue
   }, [initialValue])
 
+  function updateSaveState(s: SaveState) {
+    saveStateRef.current = s
+    setSaveState(s)
+  }
+
   const save = useCallback(
     async (val: string, ver: number, commit = false, focusVal?: string) => {
       const unchanged = val === savedRef.current
@@ -57,7 +63,7 @@ export function InlineCell({
       if (unchanged && commit && focusVal === val) return // net zero change this session
       if (savingRef.current === val && !commit) return
       savingRef.current = val
-      setSaveState('saving')
+      updateSaveState('saving')
       try {
         const res = await fetch(`/api/entries/${entryId}`, {
           method: 'PATCH',
@@ -71,13 +77,13 @@ export function InlineCell({
 
         if (res.status === 409) {
           const data = await res.json()
-          setSaveState('conflict')
+          updateSaveState('conflict')
           setConflict({ serverEntry: data.currentEntry })
           return
         }
 
         if (!res.ok) {
-          setSaveState('error')
+          updateSaveState('error')
           return
         }
 
@@ -86,10 +92,10 @@ export function InlineCell({
         versionRef.current = updated.version
         onVersionUpdate(updated.version)
         onServerUpdate(updated)
-        setSaveState('saved')
-        setTimeout(() => setSaveState('idle'), 2000)
+        updateSaveState('saved')
+        setTimeout(() => updateSaveState('idle'), 2000)
       } catch {
-        setSaveState('error')
+        updateSaveState('error')
       } finally {
         savingRef.current = null
       }
@@ -99,11 +105,14 @@ export function InlineCell({
 
   function handleChange(val: string) {
     setValue(val)
-    setSaveState('idle')
+    // Only re-render save indicator when transitioning away from a visible state
+    if (saveStateRef.current === 'saved' || saveStateRef.current === 'error') {
+      updateSaveState('idle')
+    }
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
       save(val, versionRef.current)
-    }, 500)
+    }, 1500)
   }
 
   function handleBlur() {
@@ -165,7 +174,7 @@ export function InlineCell({
           serverEntry={conflict.serverEntry}
           onClose={() => {
             setConflict(null)
-            setSaveState('idle')
+            updateSaveState('idle')
           }}
           onUseServer={() => {
             const serverVal = conflict.serverEntry[field as keyof EntryRow] as string
@@ -175,12 +184,12 @@ export function InlineCell({
             onVersionUpdate(conflict.serverEntry.version)
             onServerUpdate(conflict.serverEntry)
             setConflict(null)
-            setSaveState('idle')
+            updateSaveState('idle')
           }}
           onKeepMine={(serverVersion) => {
             versionRef.current = serverVersion
             setConflict(null)
-            setSaveState('idle')
+            updateSaveState('idle')
             save(value, serverVersion)
           }}
         />
