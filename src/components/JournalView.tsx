@@ -32,10 +32,20 @@ export function JournalView() {
       })
   }, [])
 
-  // Load streams + rollover time once
+  // Load streams once; re-fetch rollover time whenever the tab regains focus
   useEffect(() => {
     fetch('/api/streams').then((r) => r.json()).then(setAllStreams)
-    fetch('/api/settings').then((r) => r.json()).then((d) => setRolloverTime(d.rolloverTime))
+
+    function fetchSettings() {
+      fetch('/api/settings').then((r) => r.json()).then((d) => setRolloverTime(d.rolloverTime))
+    }
+    fetchSettings()
+
+    function onVisible() {
+      if (document.visibilityState === 'visible') fetchSettings()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
   }, [])
 
   // Load entries for selected date
