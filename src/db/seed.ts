@@ -96,7 +96,7 @@ export async function seedDatabase(): Promise<void> {
     `
   }
 
-  await sql`INSERT INTO settings (key, value) VALUES ('rollover_time', '13:30') ON CONFLICT DO NOTHING`
+  await sql`INSERT INTO settings (key, value) VALUES ('rollover_time', '15:30') ON CONFLICT DO NOTHING`
   await sql`INSERT INTO settings (key, value) VALUES ('last_rollover_date', '') ON CONFLICT DO NOTHING`
 
   const beEngineers = await sql`SELECT id, name FROM users WHERE designation = 'BE'`
