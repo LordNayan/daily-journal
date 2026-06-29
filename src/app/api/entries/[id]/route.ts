@@ -38,7 +38,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!entry) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const body = await req.json()
-  const { field, value, streamIds, version } = body
+  const { field, value, streamIds, version, skipHistory, commitOldValue } = body
 
   if (typeof version !== 'number') {
     return NextResponse.json({ error: 'version required' }, { status: 400 })
@@ -70,7 +70,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const result = await updateEntryField(Number(id), field as AllowedField, value ?? '', version, session.userId)
+  const result = await updateEntryField(Number(id), field as AllowedField, value ?? '', version, session.userId, {
+    skipHistory: skipHistory === true,
+    commitOldValue: typeof commitOldValue === 'string' ? commitOldValue : undefined,
+  })
   if (!result.ok) {
     return NextResponse.json(
       { error: 'Conflict', currentEntry: result.currentEntry },

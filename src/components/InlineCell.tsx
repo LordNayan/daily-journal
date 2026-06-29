@@ -35,6 +35,7 @@ export function InlineCell({
   const versionRef = useRef(version)
   const savedRef = useRef(initialValue)
   const savingRef = useRef<string | null>(null)
+  const focusValueRef = useRef(initialValue)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // Keep versionRef in sync when parent updates version
@@ -49,16 +50,23 @@ export function InlineCell({
   }, [initialValue])
 
   const save = useCallback(
-    async (val: string, ver: number) => {
-      if (val === savedRef.current) return
-      if (savingRef.current === val) return
+    async (val: string, ver: number, commit = false, focusVal?: string) => {
+      const unchanged = val === savedRef.current
+      // Skip debounce saves when value unchanged; allow blur commits through even if unchanged
+      if (unchanged && !commit) return
+      if (unchanged && commit && focusVal === val) return // net zero change this session
+      if (savingRef.current === val && !commit) return
       savingRef.current = val
       setSaveState('saving')
       try {
         const res = await fetch(`/api/entries/${entryId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ field, value: val, version: ver }),
+          body: JSON.stringify({
+            field, value: val, version: ver,
+            skipHistory: !commit,
+            ...(commit && focusVal !== undefined ? { commitOldValue: focusVal } : {}),
+          }),
         })
 
         if (res.status === 409) {
@@ -100,7 +108,8 @@ export function InlineCell({
 
   function handleBlur() {
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    save(value, versionRef.current)
+    const needsCommit = value !== focusValueRef.current
+    save(value, versionRef.current, needsCommit, focusValueRef.current)
   }
 
   // Auto-resize textarea
@@ -135,7 +144,10 @@ export function InlineCell({
           handleChange(e.target.value)
         }}
         onBlur={handleBlur}
-        onFocus={(e) => autoResize(e.target)}
+        onFocus={(e) => {
+          autoResize(e.target)
+          focusValueRef.current = savedRef.current
+        }}
         placeholder={placeholder}
         rows={1}
         className={`w-full text-sm resize-none overflow-hidden bg-transparent border-0 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:bg-white rounded px-1 py-0.5 transition-colors placeholder-gray-300 min-h-[24px]

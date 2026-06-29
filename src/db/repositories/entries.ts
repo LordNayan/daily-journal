@@ -60,12 +60,23 @@ export async function updateEntryField(
   field: 'today' | 'yesterday' | 'rmComments' | 'blockedOn',
   newValue: string,
   expectedVersion: number,
-  editedByUserId: number
+  editedByUserId: number,
+  opts: { skipHistory?: boolean; commitOldValue?: string } = {}
 ): Promise<UpdateFieldResult | ConflictResult> {
   await ensureReady()
+  const { skipHistory = false, commitOldValue } = opts
+
   const currentRows = await sql`SELECT * FROM entries WHERE id = ${entryId}`
   const current = currentRows[0] as Entry | undefined
   if (!current) throw new Error('Entry not found')
+
+  // Debounce already saved this value — skip the UPDATE but commit history if needed
+  if (current[field] === newValue) {
+    if (!skipHistory && commitOldValue !== undefined && commitOldValue !== newValue) {
+      await recordHistory(entryId, field, commitOldValue, newValue, editedByUserId)
+    }
+    return { ok: true, entry: await hydrate(current), newVersion: current.version }
+  }
 
   // Field is validated by the caller (allowedFields check in the route handler)
   let updated: Record<string, unknown>[]
@@ -83,7 +94,10 @@ export async function updateEntryField(
     return { ok: false, conflict: true, currentEntry: await hydrate(current) }
   }
 
-  await recordHistory(entryId, field, current[field] ?? null, newValue, editedByUserId)
+  if (!skipHistory) {
+    const oldVal = commitOldValue ?? current[field] ?? null
+    await recordHistory(entryId, field, oldVal, newValue, editedByUserId)
+  }
 
   const entry = updated[0] as unknown as Entry
   return { ok: true, entry: await hydrate(entry), newVersion: entry.version }
