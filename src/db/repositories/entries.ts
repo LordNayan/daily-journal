@@ -185,6 +185,16 @@ export async function runRollover(targetDate: string): Promise<number> {
   return created
 }
 
+export async function clearRmCommentsForDate(date: string): Promise<number> {
+  await ensureReady()
+  const result = await sql`
+    UPDATE entries SET "rmComments" = '', version = version + 1, "updatedAt" = NOW()
+    WHERE date = ${date} AND "rmComments" != ''
+    RETURNING id
+  `
+  return result.length
+}
+
 export async function getLastRolloverDate(): Promise<string> {
   await ensureReady()
   const rows = await sql`SELECT value FROM settings WHERE key = 'last_rollover_date'`

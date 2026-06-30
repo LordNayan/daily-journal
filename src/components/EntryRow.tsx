@@ -40,7 +40,7 @@ export function EntryRow({ entry: initialEntry, allStreams, session, isToday, is
   const [streamConflict, setStreamConflict] = useState<{ serverEntry: EntryRowType } | null>(null)
 
   const canEdit = isToday && (isMine || session.role === 'pm')
-  const canEditRM = isToday && session.role === 'cto'
+  const canEditRM = session.role === 'cto'
   const readOnly = !isToday
 
   function handleVersionUpdate(v: number) {

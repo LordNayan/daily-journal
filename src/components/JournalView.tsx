@@ -18,6 +18,7 @@ export function JournalView() {
   const [loading, setLoading] = useState(true)
   const [rollingOver, setRollingOver] = useState(false)
   const [rolloverMsg, setRolloverMsg] = useState('')
+  const [clearingRM, setClearingRM] = useState(false)
   const [rolloverTime, setRolloverTime] = useState<string | null>(null)
 
   const isToday = date === todayStr()
@@ -92,6 +93,20 @@ export function JournalView() {
     }
   }
 
+  async function handleClearRMComments() {
+    setClearingRM(true)
+    try {
+      await fetch('/api/entries/clear-rm-comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date }),
+      })
+      loadEntries(date)
+    } finally {
+      setClearingRM(false)
+    }
+  }
+
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' })
     window.location.href = '/login'
@@ -159,6 +174,15 @@ export function JournalView() {
           )}
 
           <div className="ml-auto flex items-center gap-2">
+            {session.role === 'cto' && (
+              <button
+                onClick={handleClearRMComments}
+                disabled={clearingRM}
+                className="hidden sm:block text-sm border border-amber-400 text-amber-600 hover:bg-amber-50 disabled:opacity-50 rounded-md px-3 py-1.5 transition-colors whitespace-nowrap"
+              >
+                {clearingRM ? 'Clearing…' : 'Clear my comments'}
+              </button>
+            )}
             {(session.role === 'pm' || session.role === 'admin' || session.role === 'cto') && isToday && (
               <>
                 <button
@@ -203,6 +227,15 @@ export function JournalView() {
             onChange={(e) => setDate(e.target.value)}
             className="border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"
           />
+          {session.role === 'cto' && (
+            <button
+              onClick={handleClearRMComments}
+              disabled={clearingRM}
+              className="text-xs border border-amber-400 text-amber-600 hover:bg-amber-50 disabled:opacity-50 rounded-md px-2.5 py-1.5 transition-colors whitespace-nowrap"
+            >
+              {clearingRM ? 'Clearing…' : 'Clear my comments'}
+            </button>
+          )}
           {(session.role === 'pm' || session.role === 'admin' || session.role === 'cto') && isToday && (
             <button
               onClick={handleRollover}
