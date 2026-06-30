@@ -58,15 +58,15 @@ export function HistoryModal({ entryId, personName, onClose }: Props) {
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="bg-red-50 rounded p-2">
                   <p className="text-red-400 font-medium mb-1 uppercase tracking-wide text-[10px]">Before</p>
-                  <p className="text-gray-700 whitespace-pre-wrap break-words">
-                    {r.oldValue || <em className="text-gray-400">empty</em>}
-                  </p>
+                  {r.oldValue
+                    ? <div className="text-gray-700 rich-text break-words text-xs" dangerouslySetInnerHTML={{ __html: r.oldValue }} />
+                    : <em className="text-gray-400">empty</em>}
                 </div>
                 <div className="bg-green-50 rounded p-2">
                   <p className="text-green-500 font-medium mb-1 uppercase tracking-wide text-[10px]">After</p>
-                  <p className="text-gray-700 whitespace-pre-wrap break-words">
-                    {r.newValue || <em className="text-gray-400">empty</em>}
-                  </p>
+                  {r.newValue
+                    ? <div className="text-gray-700 rich-text break-words text-xs" dangerouslySetInnerHTML={{ __html: r.newValue }} />
+                    : <em className="text-gray-400">empty</em>}
                 </div>
               </div>
             </div>

@@ -18,3 +18,21 @@ textarea.auto-resize {
   resize: none;
   overflow: hidden;
 }
+
+/* Tiptap editor */
+.ProseMirror { outline: none; }
+.ProseMirror p { margin: 0; }
+.ProseMirror p + p { margin-top: 2px; }
+.ProseMirror ul { list-style: disc; padding-left: 1.25rem; margin: 0; }
+.ProseMirror ol { list-style: decimal; padding-left: 1.25rem; margin: 0; }
+.ProseMirror li { margin: 0; }
+
+/* Rich-text display (read-only + conflict modal) */
+.rich-text p { margin: 0; }
+.rich-text p + p { margin-top: 2px; }
+.rich-text ul { list-style: disc; padding-left: 1.25rem; margin: 0; }
+.rich-text ol { list-style: decimal; padding-left: 1.25rem; margin: 0; }
+.rich-text li { margin: 0; }
+.rich-text strong { font-weight: 600; }
+.rich-text em { font-style: italic; }
+.rich-text u { text-decoration: underline; }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { EntryRow as EntryRowType, Stream, Session } from '@/types'
 import { InlineCell } from './InlineCell'
 import { StreamPicker } from './StreamPicker'
@@ -36,6 +37,9 @@ export function EntryRow({ entry: initialEntry, allStreams, session, isToday, is
   const [entry, setEntry] = useState<EntryRowType>(initialEntry)
   const [version, setVersion] = useState(initialEntry.version)
   const [showHistory, setShowHistory] = useState(false)
+  const [bgColors, setBgColors] = useState<Record<string, string | null>>(() => {
+    try { return JSON.parse(initialEntry.bgColors || '{}') } catch { return {} }
+  })
   const [streamSaveState, setStreamSaveState] = useState<SaveState>('idle')
   const [streamConflict, setStreamConflict] = useState<{ serverEntry: EntryRowType } | null>(null)
 
@@ -50,6 +54,16 @@ export function EntryRow({ entry: initialEntry, allStreams, session, isToday, is
   function handleServerUpdate(updated: EntryRowType) {
     setEntry(updated)
     setVersion(updated.version)
+  }
+
+  async function handleBgColorChange(field: string, color: string | null) {
+    const updated = { ...bgColors, [field]: color }
+    setBgColors(updated)
+    await fetch(`/api/entries/${entry.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ field: 'bgColors', bgColors: updated }),
+    })
   }
 
   async function handleStreamsChange(streams: Stream[]) {
@@ -144,11 +158,13 @@ export function EntryRow({ entry: initialEntry, allStreams, session, isToday, is
                 <p className="font-medium text-amber-600 text-[10px] uppercase tracking-wide mb-1">
                   Comment from RM
                 </p>
-                <p className="whitespace-pre-wrap">{entry.rmComments}</p>
+                <div className="rich-text" dangerouslySetInnerHTML={{ __html: entry.rmComments }} />
                 <button
                   className="mt-1.5 text-[10px] text-blue-500 hover:text-blue-700 underline"
                   onClick={() => {
-                    navigator.clipboard.writeText(entry.rmComments)
+                    const tmp = document.createElement('div')
+                    tmp.innerHTML = entry.rmComments
+                    navigator.clipboard.writeText(tmp.innerText)
                   }}
                 >
                   Copy to clipboard
@@ -164,14 +180,16 @@ export function EntryRow({ entry: initialEntry, allStreams, session, isToday, is
                 version={version}
                 readOnly={false}
                 placeholder="Leave a comment…"
+                bgColor={bgColors['rmComments']}
+                onBgColorChange={(c) => handleBgColorChange('rmComments', c)}
                 onVersionUpdate={handleVersionUpdate}
                 onServerUpdate={handleServerUpdate}
               />
             ) : (
               !isMine && (
-                <div className="text-sm text-gray-500 whitespace-pre-wrap">
-                  {entry.rmComments || <span className="text-gray-300">—</span>}
-                </div>
+                entry.rmComments
+                  ? <div className="text-sm text-gray-500 rich-text" dangerouslySetInnerHTML={{ __html: entry.rmComments }} />
+                  : <span className="text-gray-300">—</span>
               )
             )}
           </div>
@@ -189,6 +207,8 @@ export function EntryRow({ entry: initialEntry, allStreams, session, isToday, is
             readOnly={readOnly || !canEdit}
             placeholder="What are you working on today?"
             highlight={isMine}
+            bgColor={bgColors['today']}
+            onBgColorChange={canEdit ? (c) => handleBgColorChange('today', c) : undefined}
             onVersionUpdate={handleVersionUpdate}
             onServerUpdate={handleServerUpdate}
           />
@@ -205,6 +225,8 @@ export function EntryRow({ entry: initialEntry, allStreams, session, isToday, is
             version={version}
             readOnly={readOnly || !canEdit}
             placeholder="What did you complete yesterday?"
+            bgColor={bgColors['yesterday']}
+            onBgColorChange={canEdit ? (c) => handleBgColorChange('yesterday', c) : undefined}
             onVersionUpdate={handleVersionUpdate}
             onServerUpdate={handleServerUpdate}
           />
@@ -223,6 +245,8 @@ export function EntryRow({ entry: initialEntry, allStreams, session, isToday, is
             version={version}
             readOnly={readOnly || !canEdit}
             placeholder="Any blockers?"
+            bgColor={bgColors['blockedOn']}
+            onBgColorChange={canEdit ? (c) => handleBgColorChange('blockedOn', c) : undefined}
             onVersionUpdate={handleVersionUpdate}
             onServerUpdate={handleServerUpdate}
           />
@@ -242,15 +266,16 @@ export function EntryRow({ entry: initialEntry, allStreams, session, isToday, is
         </td>
       </tr>
 
-      {showHistory && (
+      {showHistory && createPortal(
         <HistoryModal
           entryId={entry.id}
           personName={entry.user.name}
           onClose={() => setShowHistory(false)}
-        />
+        />,
+        document.body
       )}
 
-      {streamConflict && (
+      {streamConflict && createPortal(
         <ConflictModal
           field="streams"
           myValue={entry.streams.map((s) => s.name).join(', ')}
@@ -271,7 +296,8 @@ export function EntryRow({ entry: initialEntry, allStreams, session, isToday, is
             setVersion(serverVersion)
             handleStreamsChange(entry.streams)
           }}
-        />
+        />,
+        document.body
       )}
     </>
   )

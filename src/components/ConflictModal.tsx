@@ -38,15 +38,15 @@ export function ConflictModal({ field, myValue, serverEntry, onKeepMine, onUseSe
         <div className="px-5 py-4 grid grid-cols-2 gap-3 text-sm">
           <div className="bg-blue-50 rounded-lg p-3">
             <p className="text-blue-600 font-medium text-xs uppercase tracking-wide mb-2">Your version</p>
-            <p className="text-gray-800 whitespace-pre-wrap break-words">
-              {myValue || <em className="text-gray-400">empty</em>}
-            </p>
+            {myValue
+              ? <div className="text-gray-800 rich-text break-words" dangerouslySetInnerHTML={{ __html: myValue }} />
+              : <em className="text-gray-400">empty</em>}
           </div>
           <div className="bg-amber-50 rounded-lg p-3">
             <p className="text-amber-600 font-medium text-xs uppercase tracking-wide mb-2">Server version</p>
-            <p className="text-gray-800 whitespace-pre-wrap break-words">
-              {serverValue || <em className="text-gray-400">empty</em>}
-            </p>
+            {serverValue
+              ? <div className="text-gray-800 rich-text break-words" dangerouslySetInnerHTML={{ __html: serverValue }} />
+              : <em className="text-gray-400">empty</em>}
           </div>
         </div>
 
