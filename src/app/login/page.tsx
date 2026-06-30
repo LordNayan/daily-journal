@@ -16,6 +16,7 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
     try {
+      debugger
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

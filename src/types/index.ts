@@ -45,6 +45,7 @@ export interface Entry {
   yesterday: string
   rmComments: string
   blockedOn: string
+  bgColors: string
   version: number
   createdAt: string
   updatedAt: string

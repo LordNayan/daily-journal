@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getEntry, updateEntryField, updateEntryStreams } from '@/db/repositories/entries'
+import { getEntry, updateEntryField, updateEntryStreams, updateEntryBgColors } from '@/db/repositories/entries'
 import { getSession } from '@/lib/session'
 
 function canEditField(
@@ -38,7 +38,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!entry) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const body = await req.json()
-  const { field, value, streamIds, version, skipHistory, commitOldValue } = body
+  const { field, value, streamIds, version, skipHistory, commitOldValue, bgColors } = body
+
+  if (field === 'bgColors') {
+    if (!canEditField(session, entry.userId, 'today')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+    if (!bgColors || typeof bgColors !== 'object') {
+      return NextResponse.json({ error: 'bgColors object required' }, { status: 400 })
+    }
+    const updated = await updateEntryBgColors(Number(id), bgColors)
+    return NextResponse.json(updated)
+  }
 
   if (typeof version !== 'number') {
     return NextResponse.json({ error: 'version required' }, { status: 400 })

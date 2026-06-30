@@ -55,6 +55,9 @@ export async function initSchema(): Promise<void> {
       "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `
+  // Migration: add bgColors if not present (idempotent)
+  await sql`ALTER TABLE entries ADD COLUMN IF NOT EXISTS "bgColors" TEXT NOT NULL DEFAULT '{}'`
+
   await sql`
     CREATE TABLE IF NOT EXISTS edit_history (
       id SERIAL PRIMARY KEY,

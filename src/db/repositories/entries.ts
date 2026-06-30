@@ -103,6 +103,16 @@ export async function updateEntryField(
   return { ok: true, entry: await hydrate(entry), newVersion: entry.version }
 }
 
+export async function updateEntryBgColors(
+  entryId: number,
+  bgColors: Record<string, string | null>
+): Promise<EntryRow> {
+  await ensureReady()
+  await sql`UPDATE entries SET "bgColors" = ${JSON.stringify(bgColors)}, "updatedAt" = NOW() WHERE id = ${entryId}`
+  const entry = (await sql`SELECT * FROM entries WHERE id = ${entryId}`)[0] as Entry
+  return hydrate(entry)
+}
+
 export async function updateEntryStreams(
   entryId: number,
   streamIds: number[],
