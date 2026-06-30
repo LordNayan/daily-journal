@@ -172,6 +172,11 @@ export async function runRollover(targetDate: string): Promise<number> {
     }
   }
 
+  const prevDate = new Date(targetDate)
+  prevDate.setUTCDate(prevDate.getUTCDate() - 1)
+  const prevDateStr = prevDate.toISOString().split('T')[0]
+  await sql`UPDATE entries SET "rmComments" = '', version = version + 1, "updatedAt" = NOW() WHERE date = ${prevDateStr} AND "rmComments" != ''`
+
   await sql`
     INSERT INTO settings (key, value) VALUES ('last_rollover_date', ${targetDate})
     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
