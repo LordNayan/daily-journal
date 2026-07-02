@@ -23,6 +23,12 @@ interface Props {
   onServerUpdate: (updated: EntryRow) => void
 }
 
+const EMOJIS = [
+  '😀', '😂', '😊', '😍', '🤔', '😢', '😡', '👍', '👎', '🙏',
+  '👏', '🎉', '🔥', '💯', '✅', '❌', '⚠️', '🚀', '💡', '📌',
+  '⏳', '🐛', '🚧',
+]
+
 const BG_COLORS: { label: string; value: string | null }[] = [
   { label: 'Clear', value: null },
   { label: 'Yellow', value: '#fef9c3' },
@@ -72,6 +78,7 @@ export function InlineCell({
   const [conflict, setConflict] = useState<{ serverEntry: EntryRow } | null>(null)
   const [isFocused, setIsFocused] = useState(false)
   const [showColorPicker, setShowColorPicker] = useState(false)
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const versionRef = useRef(version)
   const savedRef = useRef(toHtml(initialValue))
@@ -80,6 +87,7 @@ export function InlineCell({
   const saveStateRef = useRef<SaveState>('idle')
   const editorRef = useRef<Editor | null>(null)
   const colorPickerRef = useRef<HTMLDivElement>(null)
+  const emojiPickerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     versionRef.current = version
@@ -102,6 +110,17 @@ export function InlineCell({
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [showColorPicker])
+
+  useEffect(() => {
+    if (!showEmojiPicker) return
+    function handleClick(e: MouseEvent) {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
+        setShowEmojiPicker(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [showEmojiPicker])
 
   function updateSaveState(s: SaveState) {
     saveStateRef.current = s
@@ -230,6 +249,33 @@ export function InlineCell({
           <ToolbarButton onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive('orderedList')} title="Numbered list">
             <span className="text-[10px]">1.</span>
           </ToolbarButton>
+          <div className="w-px h-3 bg-gray-200 mx-0.5" />
+          <div ref={emojiPickerRef} className="relative">
+            <button
+              onMouseDown={(e) => { e.preventDefault(); setShowEmojiPicker((v) => !v) }}
+              className="text-gray-400 hover:text-gray-600 text-xs px-1 py-0.5 rounded hover:bg-gray-100 leading-none"
+              title="Insert emoji"
+            >
+              🙂
+            </button>
+            {showEmojiPicker && (
+              <div className="absolute left-0 top-6 bg-white border border-gray-200 rounded-lg shadow-xl p-2 flex flex-wrap gap-1 w-[168px] z-20">
+                {EMOJIS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      editor.chain().focus().insertContent(emoji).run()
+                      setShowEmojiPicker(false)
+                    }}
+                    className="w-7 h-7 rounded hover:bg-gray-100 text-base leading-none flex items-center justify-center"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           {onBgColorChange && (
             <>
               <div className="w-px h-3 bg-gray-200 mx-0.5" />
